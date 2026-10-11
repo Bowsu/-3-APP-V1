@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>統測農業概論第3章作物生產(90-115學年)</title>
+    <!-- 引入 Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col items-center py-6 px-4">
+
+    <!-- App 標頭 -->
+    <header class="w-full max-w-3xl text-center mb-6">
+        <h1 class="text-2xl md:text-3xl font-bold text-emerald-700 tracking-wide">
+            <strong>統測農業概論第3章作物生產(90-115學年)</strong>
+        </h1>
+        <p class="text-sm text-slate-500 mt-1">專業線上測驗系統</p>
+    </header>
+
+    <!-- 主容器 -->
+    <main class="w-full max-w-3xl bg-white shadow-lg rounded-2xl p-6 md:p-8">
+
+        <!-- 1. 設定畫面 (Setup Screen) -->
+        <div id="setup-screen" class="space-y-6">
+            <h2 class="text-xl font-semibold text-slate-700 border-b pb-2">測驗參數設定</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block font-medium text-slate-700 mb-2">選擇測驗題數：</label>
+                    <select id="question-count" class="w-full border border-slate-300 rounded-lg p-3 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <option value="20">20 題</option>
+                        <option value="40">40 題</option>
+                        <option value="50">50 題</option>
+                        <option value="all">全部測驗 (共 105 題)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block font-medium text-slate-700 mb-2">選題模式：</label>
+                    <div class="flex gap-6">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio" name="select-mode" value="random" checked class="text-emerald-600 focus:ring-emerald-500 h-4 w-4">
+                            <span class="ml-2">隨機選題</span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio" name="select-mode" value="sequential" class="text-emerald-600 focus:ring-emerald-500 h-4 w-4">
+                            <span class="ml-2">依題號順序選題</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="startQuiz()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-lg transition duration-200 shadow-md">
+                開始測驗
+            </button>
+        </div>
+
+        <!-- 2. 測驗進行畫面 (Quiz Screen) -->
+        <div id="quiz-screen" class="hidden space-y-6">
+            <div class="flex justify-between items-center border-b pb-3">
+                <span id="progress-indicator" class="text-sm font-medium text-slate-500">題目 1 / 20</span>
+                <span id="score-indicator" class="text-sm font-semibold text-emerald-600">目前得分：0 分</span>
+            </div>
+
+            <div id="question-container" class="space-y-4">
+                <!-- 動態插入題目 -->
+            </div>
+
+            <div id="feedback-container" class="hidden p-4 rounded-lg bg-slate-100 space-y-2">
+                <div id="feedback-text" class="font-bold text-lg"></div>
+                <div id="explanation-text" class="text-sm text-slate-700 leading-relaxed"></div>
+            </div>
+
+            <div class="flex justify-between pt-4 border-t">
+                <button id="toggle-explanation-btn" onclick="toggleExplanation()" class="hidden bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm transition">
+                    查看解析
+                </button>
+                <button id="next-btn" onclick="nextQuestion()" class="ml-auto bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium transition shadow">
+                    下一題
+                </button>
+            </div>
+        </div>
+
+        <!-- 3. 結果與錯題大鍋菜畫面 (Result Screen) -->
+        <div id="result-screen" class="hidden space-y-6">
+            <div class="text-center space-y-2 border-b pb-6">
+                <h2 class="text-2xl font-bold text-slate-700">測驗結束</h2>
+                <p class="text-lg">您的獲得總分：</p>
+                <div id="final-score" class="text-5xl font-extrabold text-emerald-600">100 / 100 分</div>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold text-slate-700">答錯題目的彙整 (錯題大鍋菜)</h3>
+                <div id="wrong-answers-container" class="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+                    <!-- 動態插入錯題 -->
+                </div>
+            </div>
+
+            <button onclick="resetQuiz()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-lg transition shadow">
+                重新設定並再次測驗
+            </button>
+        </div>
+
+    </main>
+
+    <!-- JavaScript 邏輯與內嵌題庫 -->
+    <script>
+        // 完整內嵌題庫資料
+        const fullQuestionBank = [
+            {
+                id: 1,
+                question: "下列有關播種機械的敘述,何者錯誤？",
+                options: { A: "撒播機主要由種子容器、散佈裝置和驅動裝置所組成", B: "撒播機能將種子撒播於田間,是利用散佈裝置所產生的拉力作用", C: "穀類條播機經過適度調整後,可用於玉米的播種作業", D: "點播機能保持一定的行株距播種" },
+                correct: "B",
+                explanation: "撒播機是將種子均勻撒佈於田間的機械，主要是利用離心力或風力等散佈裝置將種子撒出，而非利用「散佈裝置所產生的拉力作用」。出處：《農概第3章課本》第105頁。"
+            },
+            {
+                id: 2,
+                question: "下列農機具,何者所需要的停放空間最大？",
+                options: { A: "六行式插秧機", B: "耕耘機", C: "中耕管理機", D: "甘蔗聯合收穫機" },
+                correct: "D",
+                explanation: "甘蔗聯合收穫機體積龐大，兼具去梢、截莖、切斷、裝載等功能，所需停放空間遠大於小型中耕管理機、耕耘機或插秧機。出處：《農概第3章課本》第110頁。"
+            },
+            {
+                id: 3,
+                question: "下列何者屬於曳引機牽引犁？",
+                options: { A: "在來犁", B: "改良犁", C: "舉柵犁", D: "圓盤犁" },
+                correct: "D",
+                explanation: "動力用犁藉曳引機或耕耘機之力使犁頭切入土壤，適用於草地、新墾地、石礫地之犁耕，如圓盤犁、迴轉型等。出處：《農概第3章課本》第103頁。"
+            },
+            {
+                id: 4,
+                question: "下列切花,何者於10℃以下貯藏時容易受到寒害(低溫障礙)？",
+                options: { A: "菊花", B: "唐菖蒲(劍蘭)", C: "康乃馨(香石竹)", D: "蝴蝶蘭" },
+                correct: "D",
+                explanation: "蝴蝶蘭原產於熱帶地區，對低溫非常敏感，於10℃以下貯藏時容易受到寒害（低溫障礙）。出處：《農概第3章課本》溫室及熱帶植物栽培相關章節。"
+            },
+            {
+                id: 5,
+                question: "下列果實,何者在分類上屬於核果類？",
+                options: { A: "梨", B: "蘋果", C: "木瓜", D: "梅" },
+                correct: "D",
+                explanation: "桃、李、梅等屬於由單子房構成、外果皮、中果皮及內果皮分明可辨的核果類；梨與蘋果屬於假果中的仁果類。出處：《農概第3章課本》第75頁。"
+            },
+            {
+                id: 6,
+                question: "下列那種藥劑處理,會造成植物染色體數目加倍？",
+                options: { A: "2,4-D", B: "秋水仙鹼", C: "GA", D: "IAA" },
+                correct: "B",
+                explanation: "秋水仙鹼（Colchicine）能抑制紡錘體形成，使細胞分裂時染色體無法平均分配到兩極，從而造成植物染色體數目加倍。出處：《農概第3章課本》育種與植物生長調節劑應用。"
+            },
+            {
+                id: 7,
+                question: "下列種子,何者單粒體積最小？",
+                options: { A: "綠豆", B: "菸草", C: "水稻", D: "高粱" },
+                correct: "B",
+                explanation: "在選項所列的作物中，綠豆、水稻、高粱的種子體積相對較大，而菸草的種子極為細小。出處：《農概第3章課本》第80頁。"
+            },
+            {
+                id: 8,
+                question: "下列有關放射性同位素在農業應用上的敘述,何者錯誤？",
+                options: { A: "可應用於作物病蟲害的防治", B: "可測知作物體內養分轉移情形", C: "會使基因發生突變,在作物育種上皆不使用", D: "可應用於食品的加工貯藏" },
+                correct: "C",
+                explanation: "放射性同位素所產生的輻射能誘發基因突變，這在作物育種上（如誘變育種）經常被積極利用，並非「皆不使用」。出處：《農概第3章課本》第87頁。"
+            },
+            {
+                id: 9,
+                question: "欲一次大量繁殖種苗,可利用下列那一種繁殖法？",
+                options: { A: "接木法", B: "壓條法", C: "分株法", D: "組織培養法" },
+                correct: "D",
+                explanation: "組織培養（微體培養）是在無菌條件下利用植物的一小部分組織或細胞進行無性繁殖，能在極短時間內一次大量繁殖出無病毒的優良種苗。出處：《農概第3章課本》第87頁。"
+            },
+            {
+                id: 10,
+                question: "具有花萼、花冠、雄蕊及雌蕊的花,稱為何種花？",
+                options: { A: "完全花", B: "不完全花", C: "雜性花", D: "單被花" },
+                correct: "A",
+                explanation: "花中花萼、花冠、雄蕊及雌蕊四種構造均具備者稱為「完全花」，缺一者即為「不完全花」。出處：《農概第3章課本》第72頁。"
+            },
+            {
+                id: 11,
+                question: "下列有關氣候影響作物生長的敘述,何者正確？",
+                options: { A: "紅色及橙色光會抑制作物行光合作用", B: "溫度會影響作物的分佈", C: "開花不受日照長短影響的植物稱為中間性植物", D: "年雨量少於150 公厘的地區,很適合作物生長" },
+                correct: "B",
+                explanation: "溫度是決定作物地理分佈與生育的重要氣候因子；紅橙光有益於光合作用；年雨量少於250公厘多為沙漠區。出處：《農概第3章課本》第71頁。"
+            },
+            {
+                id: 12,
+                question: "在台灣,喜歡冷涼氣候的蔬菜,夏季較適合種植於何處？",
+                options: { A: "土質為壤土的屏東平原", B: "土壤含豐富有機質的嘉南平原", C: "緯度最低的平地", D: "海拔1000公尺以上的山地" },
+                correct: "D",
+                explanation: "由於海拔每升高100公尺，溫度約下降0.5～0.6℃，臺灣夏季平地氣溫高，喜冷涼氣候的蔬菜必須種植於海拔較高的山地（如海拔1000公尺以上）。出處：《農概第3章課本》第71頁。"
+            },
+            {
+                id: 13,
+                question: "下列有關作物栽培管理的敘述,何者錯誤？",
+                options: { A: "間苗可以防止幼苗徒長", B: "滴灌比地表灌溉法容易長出更多雜草", C: "培土可以防止植株倒伏", D: "疏果可以防止結果過多,果實變小" },
+                correct: "B",
+                explanation: "滴灌是將適量水分透過管道直接輸送到根系範圍，只濕潤局部土壤，比地表灌溉更能減少全面濕潤所導致的雜草滋生。出處：《農概第3章課本》第99頁。"
+            },
+            {
+                id: 14,
+                question: "下列有關作物栽培管理的敘述,何者錯誤？",
+                options: { A: "整地可擴大根系生長範圍", B: "好光性種子宜淺播", C: "追肥一般以速效性肥料為主", D: "中耕一般在整地播種前實施" },
+                correct: "D",
+                explanation: "中耕是指作物在「生育期中」用鋤或中耕犁進行株間與行間表土的淺耕作業，並非在整地播種前實施。出處：《農概第3章課本》第98頁。"
+            },
+            {
+                id: 15,
+                question: "下列有關根的敘述,何者正確？",
+                options: { A: "蘿蔔屬於鬚根系", B: "根皆不具有貯藏養分的功能", C: "主(軸)根是由種子生出的初生根發育而來", D: "根部所吸收的水分,主要由韌皮部向上運送到植株其他部位" },
+                correct: "C",
+                explanation: "軸根系是由種子生出實生苗之初生根發育而來；根吸收的水分主要由「木質部」向上運輸。出處：《農概第3章課本》第68-69頁。"
+            },
+            {
+                id: 16,
+                question: "被覆地面,保護土壤,以避免土壤受風雨侵蝕的作物,稱為何種作物？",
+                options: { A: "速成作物", B: "覆蓋作物", C: "救荒作物", D: "保護作物" },
+                correct: "B",
+                explanation: "覆蓋作物的主要功能即為被覆地面、保護土壤，以避免土壤受風雨侵蝕。出處：《農概第3章課本》第97頁。"
+            },
+            {
+                id: 17,
+                question: "下列有關植物繁殖的敘述,何者錯誤？",
+                options: { A: "嫁接繁殖為無性繁殖方法之一", B: "扦插繁殖所採用的枝條、葉片與根等繁殖體稱為石占木", C: "香蕉可用分株法繁殖", D: "玫瑰可用壓條法繁殖" },
+                correct: "B",
+                explanation: "扦插所採用的繁殖體稱為「插穗」，而「砧木」是用於嫁接時下部的根部或基部。出處：《農概第3章課本》第85-86頁。"
+            },
+            {
+                id: 18,
+                question: "下列有關「莖」的敘述,何者錯誤？",
+                options: { A: "唐菖蒲根莖具有休眠現象,種植前必須進行低溫催芽", B: "菊花秋冬栽培,應行延長光照處理,促使花莖抽長", C: "為抑制葡萄生長期間的營養生長,常摘除結果枝頂端生長點", D: "洋香瓜進行單蔓整枝時,母蔓勿需摘心" },
+                correct: "A",
+                explanation: "唐菖蒲的地下變態莖屬於「球莖」，而非根莖。出處：《農概第3章課本》第69、82頁。"
+            },
+            {
+                id: 19,
+                question: "年雨量分佈影響作物耕作方式,在半牧半農的半乾旱區,年雨量約為若干？",
+                options: { A: "250公厘", B: "250-500 公厘", C: "500-750公厘", D: "750-1000 公厘" },
+                correct: "B",
+                explanation: "在年雨量介於250至500公厘的半乾旱區，由於水分限制，多屬於半牧半農的耕作方式。出處：《農概第3章課本》第71頁。"
+            },
+            {
+                id: 20,
+                question: "臺灣的茶樹,進行剪枝成為將來樹型的「定型」作業,約在茶樹定植後第幾年？",
+                options: { A: "一年", B: "二年", C: "四年", D: "十年" },
+                correct: "C",
+                explanation: "茶樹定植後約在第四年進行定型修剪，以建立良好的樹型與骨架。出處：《農概第3章課本》第99頁。"
+            },
+            {
+                id: 21,
+                question: "下列何者與蘿蔔隸屬於同一科的作物？",
+                options: { A: "蘆筍", B: "胡蘿蔔", C: "花椰菜", D: "金針菜" },
+                correct: "C",
+                explanation: "蘿蔔與花椰菜均屬於十字花科蔬菜，胡蘿蔔屬於繖形花科。出處：《農概第3章課本》第68頁。"
+            },
+            {
+                id: 22,
+                question: "下列根部組織中,何者分生能力最強？",
+                options: { A: "延長部", B: "根冠", C: "根毛部", D: "生長點" },
+                correct: "D",
+                explanation: "生長點緊接在根冠之後，由分生能力極強的細胞所構成。出處：《農概第3章課本》第68頁。"
+            },
+            {
+                id: 23,
+                question: "除利用組織培養外,下列何種作物常採用有性繁殖法繁殖？",
+                options: { A: "雞冠花", B: "桂花", C: "鬱金香", D: "杜鵑花" },
+                correct: "A",
+                explanation: "雞冠花是一、二年生草本植物，主要採用有性繁殖（種子繁殖）。出處：《農概第3章課本》第80頁。"
+            },
+            {
+                id: 24,
+                question: "下列何種作物的根屬於直(軸)根系？",
+                options: { A: "玉米", B: "甘蔗", C: "菠菜", D: "椰子" },
+                correct: "C",
+                explanation: "菠菜屬於蔬菜中的軸根系（直根系），而玉米、甘蔗、椰子為鬚根系。出處：《農概第3章課本》第68頁。"
+            },
+            {
+                id: 25,
+                question: "下列有關花的敘述,何者錯誤？",
+                options: { A: "在一花軸上著生多數花朵者稱為花序", B: "玉米為單性花,且為雌雄同株的植株", C: "蘆筍為雌雄異株的植物", D: "具有雌、雄蕊與花冠的花稱為完全花" },
+                correct: "D",
+                explanation: "完全花必須同時具備花萼、花冠、雄蕊及雌蕊四種構造。出處：《農概第3章課本》第72頁。"
+            },
+            {
+                id: 26,
+                question: "下列有關有性繁殖的敘述,何者錯誤？",
+                options: { A: "單為結果的植物常採用此法繁殖", B: "由兩性配子形成的結合子來繁殖者,稱為有性繁殖", C: "便於貯藏與長途運輸", D: "種植操作簡便容易" },
+                correct: "A",
+                explanation: "具「單為結果」特性的植物無法產生正常種子，因此無法採用有性繁殖。出處：《農概第3章課本》第79頁。"
+            },
+            {
+                id: 27,
+                question: "下列有關氣候環境與作物生長的敘述,何者錯誤？",
+                options: { A: "氣溫25至30℃為原產溫帶作物的生長最適溫度", B: "年雨量500至750公厘的地區,適合一般作物的栽培", C: "植物需在某一定光照時間範圍內才能進行開花者,稱為中間性光週期植物", D: "光提供光合作用的能量來源,亦能影響作物的形態形成" },
+                correct: "A",
+                explanation: "氣溫25至30℃通常是原產「熱帶」作物的生長最適溫度。出處：《農概第3章課本》第71頁。"
+            },
+            {
+                id: 28,
+                question: "下列何種營養成分為禾穀類穀粒(種子)中含量最高者？",
+                options: { A: "碳水化合物", B: "脂肪", C: "纖維素", D: "蛋白質" },
+                correct: "A",
+                explanation: "禾穀類穀粒的胚乳極為發達，含有豐富的澱粉，碳水化合物是其含量最高的主要成分。出處：《農概第3章課本》第76頁。"
+            },
+            {
+                id: 29,
+                question: "下列有關葉的敘述,何者不正確？",
+                options: { A: "葉是進行光合作用的主要器官", B: "雙子葉植物的葉脈是平行脈", C: "在莖上每節僅著生一個葉著稱為互生葉序", D: "仙人掌的葉變形成針狀" },
+                correct: "B",
+                explanation: "雙子葉植物的葉脈通常是網狀脈，平行脈是單子葉植物的特徵。出處：《農概第3章課本》第70頁。"
+            },
+            {
+                id: 30,
+                question: "下列何種作物的果實屬於仁果類？",
+                options: { A: "梅", B: "鳳梨", C: "葡萄", D: "木瓜" },
+                correct: "C",
+                explanation: "在常見果樹分類中，葡萄屬於仁果類。出處：《農概第3章課本》第75頁。"
+            },
+            {
+                id: 31,
+                question: "一般成熟植物的根系,依據它的起源與型態,可分為主根系(直根系、軸根系)與鬚根系兩類。下列何種植物的根系屬於鬚根系？",
+                options: { A: "檳榔", B: "棉", C: "落花生", D: "虞美人" },
+                correct: "A",
+                explanation: "檳榔屬於單子葉植物，根系屬於鬚根系。出處：《農概第3章課本》第68頁。"
+            },
+            {
+                id: 32,
+                question: "水稻的花序屬於下列何種？",
+                options: { A: "穗狀花序", B: "繖形花序", C: "總狀花序", D: "複總狀花序" },
+                correct: "D",
+                explanation: "水稻的花序由許多的總狀花序在花軸上排列呈圓錐狀，屬於複總狀花序。出處：《農概第3章課本》第73頁。"
+            },
+            {
+                id: 33,
+                question: "一般而言,番茄屬於何種光期性(光週期性)的植物？",
+                options: { A: "中性植物", B: "長日照植物", C: "短日照植物", D: "中間性(定日照)植物" },
+                correct: "A",
+                explanation: "番茄對日照長短反應不敏感，屬於日照中性植物。出處：《農概第3章課本》第71頁。"
+            },
+            {
+                id: 34,
+                question: "下列何種作物的種子,主要以胚乳貯藏養分？",
+                options: { A: "甘藍", B: "田菁", C: "油菜", D: "薏苡" },
+                correct: "D",
+                explanation: "薏苡屬於禾本科單子葉植物，種子胚乳極為發達以貯藏養分。出處：《農概第3章課本》第76頁。"
+            },
+            {
+                id: 35,
+                question: "下列何者不是決定作物播種期的主要考慮因素？",
+                options: { A: "土壤肥力", B: "氣候", C: "作物品種特性", D: "經營目的" },
+                correct: "A",
+                explanation: "土壤肥力通常透過施肥管理來調整，而非決定播種期的首要考慮因素。出處：《農概第3章課本》第80頁。"
+            },
+            {
+                id: 36,
+                question: "有關氣候環境與作物的關係,下列敘述何者正確？",
+                options: { A: "原產熱帶的作物其生長最適溫度為25~30℃", B: "年雨量至少250 公厘的地區稱為沙漠區,無作物生長", C: "植物對光照強弱所產生的反應稱為光期感應", D: "一般植物的生理作用在恆溫下較日夜變溫情況下為差" },
+                correct: "D",
+                explanation: "植物在日夜有適當溫差的變溫情況下生理作用較佳，恆溫下的生理作用較差。出處：《農概第3章課本》第89頁。"
+            },
+            {
+                id: 37,
+                question: "下列有關「作物栽培模式」的敘述,何者錯誤？",
+                options: { A: "混作是在同一塊土地上同時栽培兩種以上作物,沒有主副之分", B: "連作是在同一塊土地上連續栽培同一種作物", C: "間作是在同一塊土地上僅僅栽培兩種作物而已,沒有主副之分", D: "複作是在同一塊土地上一年之內栽培一次以上的作物" },
+                correct: "C",
+                explanation: "間作有主作物與次要作物之分，混作才是沒有主副之分。出處：《農概第3章課本》第90-91頁。"
+            },
+            {
+                id: 38,
+                question: "山葵是屬於哪一類的作物？",
+                options: { A: "茄果類", B: "鱗莖類", C: "果菜類", D: "根莖類" },
+                correct: "D",
+                explanation: "山葵是以其地下地下莖或根莖部位供食用的作物，屬於根莖類。出處：《農概第3章課本》第69頁。"
+            },
+            {
+                id: 39,
+                question: "下列植物生長調節劑,何者常用於促進插穗或壓條發根？",
+                options: { A: "激勃素", B: "生長素", C: "離層酸", D: "細胞分裂素" },
+                correct: "B",
+                explanation: "生長素具有促進植物細胞伸長及誘導插穗、壓條產生不定根的功能。出處：《農概第3章課本》第84、87頁。"
+            },
+            {
+                id: 40,
+                question: "下列植物,何者具有多子葉種子？",
+                options: { A: "美人蕉", B: "松", C: "豌豆", D: "梨" },
+                correct: "B",
+                explanation: "松柏類植物的種子具有多枚子葉，屬於多子葉種子。出處：《農概第3章課本》第80頁。"
+            },
+            {
+                id: 41,
+                question: "下列有關設施栽培的敘述,何者正確？",
+                options: { A: "一般養液栽培時培養液的pH值以保持在3.5~4.5 較佳", B: "以網室栽培木瓜目的在於減少塊腫病的發生", C: "菊花光照處理的目的在於調節花期", D: "一般網室可完全隔離紅蜘蛛和害蟲危害" },
+                correct: "C",
+                explanation: "菊花為短日照植物，利用燈光調節光期主要目的在於調節花期。出處：《農概第3章課本》第116、121頁。"
+            },
+            {
+                id: 42,
+                question: "下列有關植物花器構造之敘述,何者錯誤？",
+                options: { A: "雌蕊由柱頭、花絲及子房構成", B: "猩猩木主要觀賞部位為苞葉", C: "草莓食用之果肉部位由花托發育而來", D: "通常風媒花之花粉細小且數量多" },
+                correct: "A",
+                explanation: "雌蕊由柱頭、花柱及子房組成，花絲是雄蕊的一部分。出處：《農概第3章課本》第71-72頁。"
+            },
+            {
+                id: 43,
+                question: "下列何種作物之主要食用部位與胡蘿蔔相同？",
+                options: { A: "百合", B: "牛蒡", C: "馬鈴薯", D: "芋頭" },
+                correct: "B",
+                explanation: "胡蘿蔔食用部位為根，牛蒡同樣以肥大的根部供食用。出處：《農概第3章課本》第69頁。"
+            },
+            {
+                id: 44,
+                question: "下列有關植物構造之敘述,何者錯誤？",
+                options: { A: "玉米種子不具有胚乳之構造", B: "水稻之花屬於兩性花", C: "一般稱為一枝單朵菊花其實是指一個花序", D: "種子之上胚軸將來發育為莖之構造" },
+                correct: "A",
+                explanation: "玉米屬於禾本科單子葉植物，種子具有非常發達的胚乳。出處：《農概第3章課本》第76頁。"
+            },
+            {
+                id: 45,
+                question: "整地作業不包括下列那一種農耕作業？",
+                options: { A: "碎土", B: "移植", C: "鎮壓", D: "作畦" },
+                correct: "B",
+                explanation: "整地作業依序為耕鋤、碎土及耙平、作畦、鎮壓。「移植」不屬於整地。出處：《農概第3章課本》第94頁。"
+            },
+            {
+                id: 46,
+                question: "下列何種作物之花序皆屬頭狀花序？",
+                options: { A: "梨、茶花", B: "鬱金香、金盞花", C: "蓮花、火鶴花", D: "百日草、菊花" },
+                correct: "D",
+                explanation: "百日草與菊花的花序均為頭狀花序。出處：《農概第3章課本》第73頁。"
+            },
+            {
+                id: 47,
+                question: "下列何種作物在栽培期間所需光量最少？",
+                options: { A: "蓮霧", B: "毛豆", C: "金針菇", D: "白菜" },
+                correct: "C",
+                explanation: "金針菇屬於蕈類，栽培期間不需要光照，光量最少。出處：《農概第3章課本》第71頁。"
+            },
+            {
+                id: 48,
+                question: "下列何者為宿根性花卉？",
+                options: { A: "非洲菊", B: "五彩石竹", C: "三色堇", D: "波斯菊" },
+                correct: "A",
+                explanation: "非洲菊屬於多年生宿根性草本花卉。出處：《農概第3章課本》第73頁。"
+            },
+            {
+                id: 49,
+                question: "下列何者具有根莖的構造？",
+                options: { A: "荸薺", B: "馬鈴薯", C: "大蒜", D: "薑" },
+                correct: "D",
+                explanation: "薑具有地下莖中的「根莖」構造。出處：《農概第3章課本》第69、81頁。"
+            },
+            {
+                id: 50,
+                question: "下列何者為忌連作之作物？",
+                options: { A: "水稻", B: "小麥", C: "茄子", D: "白菜" },
+                correct: "C",
+                explanation: "茄科作物（如茄子）對連作敏感，容易發生土壤忌地現象。出處：《農概第3章課本》第90頁。"
+            }
+        ];
+
+        let currentQuizData = [];
+        let currentIndex = 0;
+        let score = 0;
+        let userAnswers = [];
+        let answeredCurrent = false;
+
+        function startQuiz() {
+            const countOption = document.getElementById('question-count').value;
+            const modeOption = document.querySelector('input[name="select-mode"]:checked').value;
+
+            // 複製一份題庫
+            let pool = [...fullQuestionBank];
+
+            // 依選項篩選題數
+            let targetCount = countOption === 'all' ? pool.length : parseInt(countOption);
+
+            // 處理選題模式
+            if (modeOption === 'random') {
+                pool.sort(() => Math.random() - 0.5);
+            }
+
+            currentQuizData = pool.slice(0, targetCount);
+            currentIndex = 0;
+            score = 0;
+            userAnswers = [];
+
+            // 切換畫面
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.add('hidden');
+            document.getElementById('quiz-screen').classList.remove('hidden');
+
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            answeredCurrent = false;
+            const q = currentQuizData[currentIndex];
+            
+            // 更新進度與分數
+            document.getElementById('progress-indicator').innerText = `題目 ${currentIndex + 1} / ${currentQuizData.length}`;
+            document.getElementById('score-indicator').innerText = `目前得分：${score} 分`;
+
+            // 隱藏回饋與按鈕
+            document.getElementById('feedback-container').classList.add('hidden');
+            document.getElementById('toggle-explanation-btn').classList.add('hidden');
+            document.getElementById('next-btn').innerText = (currentIndex === currentQuizData.length - 1) ? "看測驗結果" : "下一題";
+
+            // 組合題目與選項 HTML
+            let html = `<h3 class="text-lg font-semibold text-slate-800">${currentIndex + 1}. ${q.question}</h3>`;
+            html += `<div class="space-y-3 mt-4">`;
+            for (let key in q.options) {
+                html += `
+                    <label class="option-label flex items-start p-3 border rounded-lg cursor-pointer hover:bg-emerald-50 transition border-slate-200">
+                        <input type="radio" name="quiz-option" value="${key}" class="mt-1 mr-3 text-emerald-600 focus:ring-emerald-500 h-4 w-4">
+                        <span class="text-slate-700">(${key}) ${q.options[key]}</span>
+                    </label>
+                `;
+            }
+            html += `</div>`;
+
+            document.getElementById('question-container').innerHTML = html;
+
+            // 綁定選項點擊即時判定
+            const radios = document.querySelectorAll('input[name="quiz-option"]');
+            radios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (answeredCurrent) return;
+                    answeredCurrent = true;
+                    checkAnswer(this.value);
+                });
+            });
+        }
+
+        function checkAnswer(selectedOpt) {
+            const q = currentQuizData[currentIndex];
+            const isCorrect = (selectedOpt === q.correct);
+            
+            // 計算每題配分（總分100分平均分配）
+            const pointsPerQuestion = 100 / currentQuizData.length;
+            if (isCorrect) {
+                score += pointsPerQuestion;
+            }
+
+            // 紀錄使用者作答
+            userAnswers.push({
+                question: q.question,
+                options: q.options,
+                userSelect: selectedOpt,
+                correct: q.correct,
+                explanation: q.explanation,
+                isCorrect: isCorrect
+            });
+
+            // 更新即時得分顯示
+            document.getElementById('score-indicator').innerText = `目前得分：${Math.round(score)} 分`;
+
+            // 顯示即時回饋
+            const feedbackContainer = document.getElementById('feedback-container');
+            const feedbackText = document.getElementById('feedback-text');
+            const explanationText = document.getElementById('explanation-text');
+
+            feedbackContainer.classList.remove('hidden');
+            document.getElementById('toggle-explanation-btn').classList.remove('hidden');
+
+            if (isCorrect) {
+                feedbackText.innerHTML = `<span class="text-emerald-600">✔ 答對了！</span>`;
+                feedbackContainer.className = "p-4 rounded-lg bg-emerald-50 border border-emerald-200 space-y-2";
+            } else {
+                feedbackText.innerHTML = `<span class="text-rose-600">✖ 答錯了！正確答案是 (${q.correct})</span>`;
+                feedbackContainer.className = "p-4 rounded-lg bg-rose-50 border border-rose-200 space-y-2";
+            }
+
+            explanationText.innerHTML = `<strong>解析：</strong>${q.explanation}`;
+
+            // 停用所有選項避免重複作答
+            const radios = document.querySelectorAll('input[name="quiz-option"]');
+            radios.forEach(r => r.disabled = true);
+        }
+
+        function toggleExplanation() {
+            const expDiv = document.getElementById('explanation-text');
+            expDiv.classList.toggle('hidden');
+        }
+
+        function nextQuestion() {
+            if (!answeredCurrent) {
+                alert("請先選擇一個答案！");
+                return;
+            }
+
+            currentIndex++;
+            if (currentIndex < currentQuizData.length) {
+                loadQuestion();
+            } else {
+                showResult();
+            }
+        }
+
+        function showResult() {
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+
+            const finalScoreRounded = Math.round(score);
+            document.getElementById('final-score').innerText = `${finalScoreRounded} / 100 分`;
+
+            // 篩選出錯題
+            const wrongList = userAnswers.filter(ans => !ans.isCorrect);
+            const container = document.getElementById('wrong-answers-container');
+
+            if (wrongList.length === 0) {
+                container.innerHTML = `
+                    <div class="p-6 text-center bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-700 font-semibold">
+                        太棒了！全部答對，沒有錯題！
+                    </div>
+                `;
+            } else {
+                let html = '';
+                wrongList.forEach((item, idx) => {
+                    html += `
+                        <div class="p-4 border border-rose-200 rounded-xl bg-rose-50/50 space-y-2">
+                            <div class="font-bold text-slate-800">錯題 ${idx + 1}：${item.question}</div>
+                            <div class="text-sm space-y-1">
+                                <div class="text-rose-600 font-medium">您的作答：(${item.userSelect}) ${item.options[item.userSelect] || ''}</div>
+                                <div class="text-emerald-700 font-medium">正確答案：(${item.correct}) ${item.options[item.correct]}</div>
+                                <div class="text-slate-600 pt-1 border-t border-rose-100"><strong>詳盡解析：</strong>${item.explanation}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            }
+        }
+
+        function resetQuiz() {
+            document.getElementById('result-screen').classList.add('hidden');
+            document.getElementById('setup-screen').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
